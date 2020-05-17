@@ -16,30 +16,31 @@
 {
    CDVPluginResult* pluginResult = nil;
    NSString* urlString = [command.arguments objectAtIndex:0];
-
    if (urlString != nil) {
        if ([self.webView isKindOfClass:[WKWebView class]]) {
             WKWebView* wkWebView = (WKWebView*) self.webView;
             if (@available(iOS 11.0, *)) {
                 __block NSMutableDictionary* json = [NSMutableDictionary dictionary];
                 [wkWebView.configuration.websiteDataStore.httpCookieStore getAllCookies:^(NSArray* cookies) {
-                    __block NSString *cookieValue;
-                 
                     [cookies enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
                            NSHTTPCookie *cookie = obj;
-
                            [json setObject:cookie.value forKey:cookie.name];
                     }];
-                    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
-
-                    NSString* jsonString=[[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+                    NSError *error;
+                    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:json
+                                                                       options:NSJSONWritingPrettyPrinted
+                                                                         error:&error];
+                    NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+                    __block CDVPluginResult* pluginResult = nil;
                     if (jsonString != nil) {
                         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
                     } else {
                         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No cookie found"];
                     }
                     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                    return;
                 }];
+                
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"WKWebView requires iOS 11+ in order to get the cookie"];
                 [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -68,12 +69,13 @@
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No cookie found"];
             }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         }
 
    } else {
        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"URL was null"];
+       [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
    }
-   [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
  - (void)getCookieValue:(CDVInvokedUrlCommand*)command
