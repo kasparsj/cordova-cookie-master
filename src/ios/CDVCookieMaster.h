@@ -10,6 +10,7 @@
 
 @interface CDVCookieMaster : CDVPlugin
 
+- (void)getCookies:(CDVInvokedUrlCommand*)command;
 - (void)getCookieValue:(CDVInvokedUrlCommand*)command;
 - (void)setCookieValue:(CDVInvokedUrlCommand*)command;
 - (void)clearCookies:(CDVInvokedUrlCommand*)command;
