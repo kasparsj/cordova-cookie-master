@@ -6,12 +6,15 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONStringer;
 
+import android.os.Build;
 import android.util.Log;
 
 import java.net.HttpCookie;
 
 import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 
 public class CookieMaster extends CordovaPlugin {
 
@@ -212,25 +215,34 @@ public class CookieMaster extends CordovaPlugin {
     }
 
     private boolean clearCookies(final CallbackContext callbackContext) {
-        CookieManager cookieManager = CookieManager.getInstance();
+        try {
+            cordova
+                    .getThreadPool()
+                    .execute(new Runnable() {
+                        public void run() {
+                            CookieManager cookieManager = CookieManager.getInstance();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
-                    @Override
-                    public void onReceiveValue(Boolean value) {}
-                });
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                                cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
+                                    @Override
+                                    public void onReceiveValue(Boolean value) {
+                                    }
+                                });
 
-                cookieManager.flush();
-            }
-            else {
-                cookieManager.removeAllCookie();
-                cookieManager.removeSessionCookie();
-            }
+                                cookieManager.flush();
+                            } else {
+                                cookieManager.removeAllCookie();
+                                cookieManager.removeSessionCookie();
+                            }
 
-            callbackContext.success();
+                            callbackContext.success();
+                        }
+                    });
+            return true;
         }
-
-        callbackContext.error("Invalid action");
-        return false;
+        catch (Exception e) {
+            callbackContext.error("Invalid action "+e.getMessage());
+            return false;
+        }
     }
 }
