@@ -223,11 +223,7 @@ public class CookieMaster extends CordovaPlugin {
                             CookieManager cookieManager = CookieManager.getInstance();
 
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                                cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
-                                    @Override
-                                    public void onReceiveValue(Boolean value) {
-                                    }
-                                });
+                                cookieManager.removeAllCookies(null);
 
                                 cookieManager.flush();
                             } else {
