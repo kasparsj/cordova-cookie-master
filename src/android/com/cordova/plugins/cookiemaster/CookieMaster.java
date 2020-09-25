@@ -225,24 +225,28 @@ public class CookieMaster extends CordovaPlugin {
             Handler handler = new Handler(looper);
             handler.post(new Runnable() {
                 public void run() {
-                    final CookieManager cookieManager = CookieManager.getInstance();
+                    try {
+                        final CookieManager cookieManager = CookieManager.getInstance();
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                        cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
-                            @Override
-                            public void onReceiveValue(Boolean value) {
-                                looper.quitSafely();
-                                cookieManager.flush();
-                                callbackContext.success();
-                            }
-                        });
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                            cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
+                                @Override
+                                public void onReceiveValue(Boolean value) {
+                                    looper.quitSafely();
+                                    cookieManager.flush();
+                                    callbackContext.success();
+                                }
+                            });
 
-                    } else {
-                        cookieManager.removeAllCookie();
-                        cookieManager.removeSessionCookie();
-                        callbackContext.success();
+                        } else {
+                            cookieManager.removeAllCookie();
+                            cookieManager.removeSessionCookie();
+                            callbackContext.success();
+                        }
+
+                    } catch (Exception e) {
+                        callbackContext.error("Error clearing cookies: " + e.getMessage());
                     }
-
                 }
             });
             return true;
