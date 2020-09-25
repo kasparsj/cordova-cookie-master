@@ -9,6 +9,9 @@ import org.json.JSONException;
 import org.json.JSONStringer;
 
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 import java.net.HttpCookie;
@@ -216,24 +219,32 @@ public class CookieMaster extends CordovaPlugin {
 
     private boolean clearCookies(final CallbackContext callbackContext) {
         try {
-            cordova
-                    .getThreadPool()
-                    .execute(new Runnable() {
-                        public void run() {
-                            CookieManager cookieManager = CookieManager.getInstance();
+            HandlerThread handlerThread = new HandlerThread("ClearCookies");
+            handlerThread.start();
+            final Looper looper = handlerThread.getLooper();
+            Handler handler = new Handler(looper);
+            handler.post(new Runnable() {
+                public void run() {
+                    final CookieManager cookieManager = CookieManager.getInstance();
 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                                cookieManager.removeAllCookies(null);
-
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                        cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
+                            @Override
+                            public void onReceiveValue(Boolean value) {
+                                looper.quitSafely();
                                 cookieManager.flush();
-                            } else {
-                                cookieManager.removeAllCookie();
-                                cookieManager.removeSessionCookie();
+                                callbackContext.success();
                             }
+                        });
 
-                            callbackContext.success();
-                        }
-                    });
+                    } else {
+                        cookieManager.removeAllCookie();
+                        cookieManager.removeSessionCookie();
+                        callbackContext.success();
+                    }
+
+                }
+            });
             return true;
         }
         catch (Exception e) {
