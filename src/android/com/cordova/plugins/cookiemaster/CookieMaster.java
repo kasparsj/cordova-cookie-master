@@ -9,6 +9,9 @@ import org.json.JSONException;
 import org.json.JSONStringer;
 
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 import java.net.HttpCookie;
@@ -216,28 +219,36 @@ public class CookieMaster extends CordovaPlugin {
 
     private boolean clearCookies(final CallbackContext callbackContext) {
         try {
-            cordova
-                    .getThreadPool()
-                    .execute(new Runnable() {
-                        public void run() {
-                            CookieManager cookieManager = CookieManager.getInstance();
+            HandlerThread handlerThread = new HandlerThread("ClearCookies");
+            handlerThread.start();
+            final Looper looper = handlerThread.getLooper();
+            Handler handler = new Handler(looper);
+            handler.post(new Runnable() {
+                public void run() {
+                    try {
+                        final CookieManager cookieManager = CookieManager.getInstance();
 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                                cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
-                                    @Override
-                                    public void onReceiveValue(Boolean value) {
-                                    }
-                                });
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                            cookieManager.removeAllCookies(new ValueCallback<Boolean>() {
+                                @Override
+                                public void onReceiveValue(Boolean value) {
+                                    looper.quitSafely();
+                                    cookieManager.flush();
+                                    callbackContext.success();
+                                }
+                            });
 
-                                cookieManager.flush();
-                            } else {
-                                cookieManager.removeAllCookie();
-                                cookieManager.removeSessionCookie();
-                            }
-
+                        } else {
+                            cookieManager.removeAllCookie();
+                            cookieManager.removeSessionCookie();
                             callbackContext.success();
                         }
-                    });
+
+                    } catch (Exception e) {
+                        callbackContext.error("Error clearing cookies: " + e.getMessage());
+                    }
+                }
+            });
             return true;
         }
         catch (Exception e) {
