@@ -8,7 +8,7 @@
 
 #import "CDVCookieMaster.h"
 #import <WebKit/WebKit.h>
-
+#import <libkern/OSAtomic.h>
 
 @implementation CDVCookieMaster
 
@@ -181,15 +181,41 @@
 
 - (void)clearCookies:(CDVInvokedUrlCommand*)command
 {
-    NSHTTPCookie *cookie;
-    NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
-    for (cookie in [storage cookies]) {
-        [storage deleteCookie:cookie];
-    }
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    if ([self.webView isKindOfClass:[WKWebView class]) {
+        NSSet *dataTypes = [NSSet setWithObject: WKWebsiteDataTypeCookies];
+        WKWebsiteDataStore *dataStore = [WKWebsiteDataStore defaultDataStore];
+        [dataStore fetchDataRecordsOfTypes: dataTypes
+           completionHandler:^(NSArray<WKWebsiteDataRecord *> * __nonnull records) {
+            if (records.count == 0) {
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            } else {
+                __block int64_t cookiesToDelete = records.count;
 
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                for (WKWebsiteDataRecord *record  in records) {
+                [[WKWebsiteDataStore defaultDataStore] removeDataOfTypes:record.dataTypes forDataRecords:@[record]
+                 completionHandler:^{
+                     NSLog(@"Cookies for %@ deleted successfully.",record.displayName);
+                     int64_t updatedValue = OSAtomicDecrement64Barrier(&cookiesToDelete);
+                     if (updatedValue == 0) {
+                         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                     }
+                 }];
+                }
+            }
+        }];
+    } else {
+        NSHTTPCookie *cookie;
+        NSHTTPCookieStorage *storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+        for (cookie in [storage cookies]) {
+            [storage deleteCookie:cookie];
+        }
+        [[NSUserDefaults standardUserDefaults] synchronize];
+
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
 }
 
 - (void)clearCookie:(CDVInvokedUrlCommand*)command
