@@ -181,7 +181,7 @@
 
 - (void)clearCookies:(CDVInvokedUrlCommand*)command
 {
-    if ([self.webView isKindOfClass:[WKWebView class]) {
+    if ([self.webView isKindOfClass:[WKWebView class]]) {
         NSSet *dataTypes = [NSSet setWithObject: WKWebsiteDataTypeCookies];
         WKWebsiteDataStore *dataStore = [WKWebsiteDataStore defaultDataStore];
         [dataStore fetchDataRecordsOfTypes: dataTypes
