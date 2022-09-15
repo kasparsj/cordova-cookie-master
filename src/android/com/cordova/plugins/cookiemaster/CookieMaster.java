@@ -197,6 +197,7 @@ public class CookieMaster extends CordovaPlugin {
                         public void run() {
                             try {
                                 CookieManager cookieManager = CookieManager.getInstance();
+                                cookieManager.setAcceptCookie(true);
                                 cookieManager.setCookie(url, cookieName + "=" + cookieValue);
                                 cookieManager.flush();
 
