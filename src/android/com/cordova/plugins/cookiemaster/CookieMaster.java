@@ -196,10 +196,14 @@ public class CookieMaster extends CordovaPlugin {
                     .execute(new Runnable() {
                         public void run() {
                             try {
-                                CookieManager cookieManager = CookieManager.getInstance();
-                                cookieManager.setAcceptCookie(true);
-                                cookieManager.setCookie(url, cookieName + "=" + cookieValue);
-                                cookieManager.flush();
+                              String cookieString = cookieName + "=" + cookieValue;
+                              if (url.startsWith("https://")) {
+                                  cookieString += ";SameSite=None; Secure";
+                              }
+                              CookieManager cookieManager = CookieManager.getInstance();
+                              cookieManager.setAcceptCookie(true);
+                              cookieManager.setCookie(url, cookieString);
+                              cookieManager.flush();
 
                                 PluginResult res = new PluginResult(PluginResult.Status.OK, "Successfully added cookie");
                                 callbackContext.sendPluginResult(res);
